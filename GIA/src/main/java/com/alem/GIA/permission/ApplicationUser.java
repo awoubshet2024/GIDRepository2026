@@ -44,7 +44,7 @@ public class ApplicationUser  {
             inverseJoinColumns = @JoinColumn(name="role_id")
     )
     private Set<Role> roles = new HashSet<>();
-  @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+  @OneToOne(mappedBy = "user", fetch = FetchType.EAGER)
   private Member member;
 
 

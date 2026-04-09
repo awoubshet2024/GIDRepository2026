@@ -52,7 +52,7 @@ public class AuthenticatedUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return Boolean.TRUE.equals(user.getStatus()); // ❗️ Check status here
+        return Boolean.TRUE.equals(user.getStatus()); // ❗ Check status here
     }
 
 

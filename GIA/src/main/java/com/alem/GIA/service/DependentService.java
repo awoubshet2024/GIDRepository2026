@@ -31,20 +31,9 @@ public class DependentService {
             dependent.setLastName(dto.getLastName());
             dependent.setGender(dto.getGender());
             dependent.setDateOfBirth(dto.getDateOfBirth());
-            member.get().getDependents().add(dependent);
+            memberService.addDependentToExistingMember(dto.getMemberId(),dependent);
             memberService.saveMember(member.get());
-            member.get().getDependents().forEach(d -> {
-                System.out.printf("Dependent Id: %d%n" +
-                                "First Name: %s%n" +
-                                "Last Name: %s%n " +
-                                "Gender: %s%n" +
-                                "Date of birth: %s",
-                        d.getDependentId(),
-                        d.getFirstName(),
-                        d.getLastName(),
-                        d.getGender(),
-                        d.getDateOfBirth());
-            });
+
             return "Dependent is added";
 
         }

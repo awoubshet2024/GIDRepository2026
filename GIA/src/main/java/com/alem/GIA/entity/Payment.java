@@ -1,28 +1,53 @@
 package com.alem.GIA.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.alem.GIA.enumes.BillingPeriod;
+import com.alem.GIA.enumes.PaymentMethod;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Payment {
+
     @Id
-   private int paymentId;
-   private   double amount;
-   private String reason;
-   private Date paymentDate;
-    @JsonBackReference
-    @ManyToOne
-   private Member member;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer paymentId;
+    @EqualsAndHashCode.Include
+    private BigDecimal amount;
+    @EqualsAndHashCode.Include
+    private String reason;
+    @EqualsAndHashCode.Include
+    private LocalDate paymentDate;
+    @EqualsAndHashCode.Include
+    private String checkNumber;
+    @EqualsAndHashCode.Include
+    @Enumerated(EnumType.STRING)
+    private BillingPeriod billingPeriod = BillingPeriod.MONTHLY;
 
+    @Enumerated(EnumType.STRING)
+    @EqualsAndHashCode.Include
+    private PaymentMethod paymentMethod;
+    @EqualsAndHashCode.Include
+    private String cardLast4;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    @JsonIgnore
+    private Member member;
+    @EqualsAndHashCode.Include
+    private String stripePaymentIntentId;
+    @EqualsAndHashCode.Include
+    private String status; // SUCCEEDED, FAILED
+    @EqualsAndHashCode.Include
+    private String invoiceNumber;
 
+    private Boolean invoiceIssued = false;
 }

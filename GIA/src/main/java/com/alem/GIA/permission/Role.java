@@ -24,7 +24,7 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
     private String roleName;
-    @ManyToMany(mappedBy = "roles",fetch=FetchType.LAZY)
+    @ManyToMany(mappedBy = "roles",fetch=FetchType.EAGER)
     @JsonIgnore
     private Set<ApplicationUser> users = new HashSet<>();
 

@@ -24,6 +24,7 @@ public class DependentController {
         return dependentService.getAlldependents();
     }
     @PostMapping("/addDependentToMember")
+
     public String addDependentToMember(@RequestBody DependentDto dto){
         return dependentService.addDependentToMember(dto);
     }

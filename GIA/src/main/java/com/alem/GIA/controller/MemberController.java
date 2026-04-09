@@ -2,77 +2,97 @@ package com.alem.GIA.controller;
 
 import com.alem.GIA.DTO.MemberDto;
 import com.alem.GIA.annotation.Auditable;
-import com.alem.GIA.entity.Dependent;
-import com.alem.GIA.entity.Member;
-import com.alem.GIA.entity.Payment;
-import com.alem.GIA.exception.AccessDeniedException;
+import com.alem.GIA.entity.*;
+
+
+import com.alem.GIA.mapper.MemberMapper;
 import com.alem.GIA.model.*;
 import com.alem.GIA.permission.ApplicationUser;
-import com.alem.GIA.permission.AuthenticatedUser;
+
 import com.alem.GIA.service.MemberService;
 import com.alem.GIA.service.UserService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
+
+
+import org.apache.poi.ss.usermodel.Cell;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.security.Principal;
-import java.time.LocalDate;
-import java.util.Date;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static java.sql.JDBCType.BOOLEAN;
+import static java.sql.JDBCType.NUMERIC;
+import static javax.management.openmbean.SimpleType.STRING;
 
 @RestController
 @RequestMapping("/api/members")
 public class MemberController {
     private final MemberService memberService;
     private final UserService userService;
+    private final MemberMapper memberMapper;
 
-    public MemberController(MemberService memberService, UserService userService) {
+    public MemberController(MemberService memberService, UserService userService, MemberMapper memberMapper) {
         this.memberService = memberService;
         this.userService = userService;
+        this.memberMapper = memberMapper;
+    }
+//    @PostMapping("/import-members")
+//    public ResponseEntity<String> importMembers(@RequestParam("file") MultipartFile file) {
+//
+//        memberService.importMembersFromExcel(file);
+//
+//        return ResponseEntity.ok("Members imported successfully");
+//
+//    }
+    @PostMapping("/import-members")
+    public ResponseEntity<Map<String,String>> importMembers(@RequestParam("file") MultipartFile file) {
+
+        memberService.importMembersFromExcel(file);
+
+        Map<String,String> response = new HashMap<>();
+        response.put("message", "Members imported successfully");
+
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/check-please")
-    public String checkMember(HttpServletRequest request) {
-        return "member check is ok " + request.getSession().getId();
-
-    }
     @PostMapping("/{memberId}/dependents")
-    public ResponseEntity<Member> addDependent(@PathVariable Integer memberId, @RequestBody Dependent dependent){
+    public ResponseEntity<MemberDto> addDependent(@PathVariable Integer memberId, @RequestBody Dependent dependent){
         Member member = memberService.addDependentToExistingMember(memberId,dependent);
+
+        return ResponseEntity.ok(new MemberDto(member));
+    }
+    @PostMapping("/{memberId}/beneficiaries")
+    public ResponseEntity<Member> addBeneficiary(@PathVariable Integer memberId, @RequestBody Beneficiary beneficiary){
+        Member member = memberService.addBeneficiaryToExistingMember(memberId,beneficiary);
         return ResponseEntity.ok(member);
     }
     @PostMapping("/{memberId}/payments")
-    public ResponseEntity<Member> addDependent(@PathVariable Integer memberId, @RequestBody Payment payment){
-        Member member = memberService.addPaymenttToExistingMember(memberId,payment);
+    public ResponseEntity<Member> addPayment(@PathVariable Integer memberId, @RequestBody Payment payment){
+        Member member = memberService.addPaymentToExistingMember(memberId,payment);
         return ResponseEntity.ok(member);
     }
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getImage(@PathVariable Integer id) {
-        Member member = memberService.findMemberById(id).orElseThrow(() -> new RuntimeException("Member not found"));
+       Member member = memberService.findMemberById(id).orElseThrow(() -> new RuntimeException("Member not found"));
+
         byte[]image = member.getPhoto();
         return ResponseEntity.ok().contentType(MediaType.valueOf(member.getImageType())).body(image);
     }
     @PostMapping("/{memberId}/image")
     public ResponseEntity<?> uploadImage(
-            @PathVariable Long memberId,
+            @PathVariable Integer memberId,
             @RequestParam("file") MultipartFile file,
             Authentication authentication
     ) {
@@ -98,20 +118,17 @@ public class MemberController {
 
 
 
+
 @GetMapping("/me")
 public ResponseEntity<MemberDto> getMe(Principal principal) {
 
     String username = principal.getName();
+    ApplicationUser current = userService.findUserByUserName(username);
 
-    ApplicationUser current =
-            userService.findUserByUserName(username);
-
-    // 🔥 Auto-link if admin pre-created membe
+    // Auto-link admin pre-created member
     memberService.linkMemberIfExists(current);
 
-
-    Optional<Member> member =
-            memberService.getByUserId(current.getId());
+    Optional<Member> member = memberService.getByUserIdWithCollections(current.getId());
 
     return member
             .map(m -> ResponseEntity.ok(new MemberDto(m)))
@@ -127,11 +144,14 @@ public ResponseEntity<MemberDto> getMe(Principal principal) {
     public Long getTotalMembers(){
         return memberService.getTotalMembers();
     }
-    @GetMapping("/{id}")
-    public Optional<Member> getMember(@PathVariable Integer id) {
-        return memberService.findMemberById(id);
-    }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<MemberDto> getMember(@PathVariable Integer id) {
+       //Member member = memberService.getMember(id)
+               //.orElseThrow(() -> new RuntimeException("Member not found"));
+        return ResponseEntity.ok(memberService.getMember(id));
+
+    }
     @GetMapping("/all")
     public List<MemberDto>
     getAllMembers(){
@@ -160,8 +180,8 @@ public ResponseEntity<MemberDto> getMe(Principal principal) {
 
 
     @PutMapping("/updateMember")
-    public MemberResponse updateMember(@RequestBody Member member) {
-      return   memberService.updateMember(member);
+    public MemberResponse updateMember(@RequestBody MemberDto memberDto) {
+      return   memberService.updateMember(memberDto);
 
     }
 
@@ -181,18 +201,19 @@ public ResponseEntity<MemberDto> getMe(Principal principal) {
             @RequestParam int offset,
             @RequestParam int pageSize,
             @RequestParam String field,
-            @RequestParam Sort.Direction direction) {
+            @RequestParam Sort.Direction direction,
+            @RequestParam(required = false) String lastName,
+            @RequestParam(required = false) String phone) {
 
-        Page<Member> membersPage = memberService.findMembersWithPaginationAndSorting(offset, pageSize, field, direction);
+        Page<MemberDto> dtoPage =
+                memberService.searchMembers(lastName, phone, offset, pageSize, field, direction);
 
-        Page<MemberDto> dtoPage = membersPage.map(MemberDto::new);
-
-        IPaginationParam<Page<MemberDto>> response = new IPaginationParam<>(
-                dtoPage.getTotalElements(), dtoPage
-        );
+        IPaginationParam<Page<MemberDto>> response =
+                new IPaginationParam<>(dtoPage.getTotalElements(), dtoPage);
 
         return ResponseEntity.ok(response);
     }
+
 
 
 

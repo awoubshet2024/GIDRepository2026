@@ -110,6 +110,16 @@ public class JwtFilter extends OncePerRequestFilter {
                                     null,
                                     authorities
                             );
+                    /*UserDetails userDetails =
+                            myUserDetailsService.loadUserByUsername(username);
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,   // ✅ principal is UserDetails
+                                    null,
+                                    authorities
+                            );*/
+
 
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource()

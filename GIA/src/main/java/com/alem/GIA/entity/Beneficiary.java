@@ -2,10 +2,9 @@ package com.alem.GIA.entity;
 
 import com.alem.GIA.enumes.Relationship;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDate;
 
 @Entity
 @AllArgsConstructor
@@ -13,33 +12,34 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Dependent {
+public class Beneficiary {
 
     @Id
-    @SequenceGenerator(
-            name = "dep_sequence",
-            sequenceName = "dep_sequence",
-            allocationSize = 10
-    )
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "dep_sequence"
-    )
-    private Integer dependentId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer beneficiaryId;
     @EqualsAndHashCode.Include
     private String firstName;
     @EqualsAndHashCode.Include
     private String lastName;
     @EqualsAndHashCode.Include
-    private String gender;
-    @EqualsAndHashCode.Include
     @Enumerated(EnumType.STRING)
     private Relationship relationship;
     @EqualsAndHashCode.Include
-    private LocalDate dateOfBirth;
+    private Double percentageShare;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     @JsonBackReference
     private Member member;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "address_id")
+    private Address address;
+
+    public void setAddress(Address address) {
+        this.address = address;
+        if(address != null){
+            address.setBeneficiary(this);
+        }
+    }
 }

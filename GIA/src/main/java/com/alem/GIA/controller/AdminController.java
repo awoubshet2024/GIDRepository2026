@@ -22,8 +22,6 @@ public class AdminController {
 
 
     @PostMapping("/register")
-
-
     public ResponseEntity<MemberResponse> register(@RequestBody Member member) {
 
         return ResponseEntity.ok(adminService.adminMemberRegister(member));

@@ -122,11 +122,20 @@ public class SecurityConfig {
 
 
                             .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**").permitAll()
+                            // Move this right after permitAll
+                            .requestMatchers(GET, "/api/members/me").hasAnyRole("USER", "ADMIN")
 
                             // USER
                             .requestMatchers(POST, "/api/members/self-register")
 
                             .hasAnyRole("USER","ADMIN")
+
+                            .requestMatchers("/api/payments/**")
+                            .hasAnyRole("USER","ADMIN")
+                            // ✅ ADD BILLING ACCESS HERE
+                            .requestMatchers(GET,"/api/billing/**")
+                            .hasAnyRole("USER","ADMIN")
+
 
                             .requestMatchers(GET, "/api/members/by-user/**")
                             .hasAnyRole("USER","ADMIN")
@@ -139,6 +148,11 @@ public class SecurityConfig {
 
                             // ADMIN
                             .requestMatchers(POST, "/api/admin/members/register")
+                            .hasAuthority("ADMIN:WRITE")
+                            // ADMIN
+                            .requestMatchers(POST, "/api/beneficiaries/**")
+                            .hasAuthority("ADMIN:WRITE")
+                            .requestMatchers(GET, "/api/beneficiaries/**")
                             .hasAuthority("ADMIN:WRITE")
 
                             .requestMatchers("/api/roles/**", "/api/permissions/**")
