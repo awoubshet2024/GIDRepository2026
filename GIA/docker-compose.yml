@@ -42,19 +42,25 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
       SPRING_DATASOURCE_USERNAME: alem
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
 
       MAIL_PASSWORD: ${MAIL_PASSWORD}
 
+#  pgadmin:
+#    container_name: my-pgadmin
+#    image: dpage/pgadmin4
+#    environment:
+#      PGADMIN_DEFAULT_EMAIL: admin@pgadmin.com
+#      PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
+#      PGADMIN_LISTEN_PORT: 80
   pgadmin:
     container_name: my-pgadmin
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@pgadmin.com
-      PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
-      PGADMIN_LISTEN_PORT: 80
+        PGADMIN_DEFAULT_EMAIL: admin@pgadmin.com
+        PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+        PGADMIN_LISTEN_PORT: 80
     ports:
       - "5050:80"
     depends_on:
