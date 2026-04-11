@@ -120,7 +120,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth
 
-
+                            // ✅ allow UI
+                            .requestMatchers("/", "/index.html", "/**/*.html").permitAll()
                             .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**").permitAll()
                             // Move this right after permitAll
                             .requestMatchers(GET, "/api/members/me").hasAnyRole("USER", "ADMIN")
