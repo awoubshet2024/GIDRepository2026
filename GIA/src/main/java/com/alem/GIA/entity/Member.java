@@ -81,15 +81,14 @@ public class Member {
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "address_id")
-    //@JsonManagedReference
     private Address address;
 
-    public void setAddress(Address address) {
-        this.address = address;
-        if(address != null){
-            address.setMember(this);
-        }
-    }
+//    public void setAddress(Address address) {
+//        this.address = address;
+//        if(address != null){
+//            address.setMember(this);
+//        }
+//    }
     @OneToMany(
             mappedBy = "member",
             cascade = CascadeType.ALL,

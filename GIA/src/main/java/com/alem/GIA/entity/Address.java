@@ -23,9 +23,8 @@ public class Address {
     private String state;
     private String zipCode;
 
-    @OneToOne(mappedBy = "address")
-   // @JsonBackReference
-    private Member member;
+//    @OneToOne(mappedBy = "address")
+//    private Member member;
     @OneToOne(mappedBy = "address")
     @JsonIgnore
     private Beneficiary beneficiary;
