@@ -12,7 +12,7 @@ import java.time.LocalDate;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_member_month",
-                        columnNames = "member_id", "billing_month"}
+                        columnNames = {"member_id", "billing_month"}
                 )
         }
 )
@@ -25,7 +25,7 @@ public class MembershipCharge {
     @ManyToOne
     @JoinColumn(name="member_id")
     private Member member;
-    @Column(name="billing_maonth")
+    @Column(name ="billing_month")
     private LocalDate billingMonth;
 
     private BigDecimal amount;
