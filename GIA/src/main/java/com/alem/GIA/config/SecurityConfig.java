@@ -111,67 +111,101 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         return http
-
                 .csrf(AbstractHttpConfigurer::disable)
-                //.cors(Customizer.withDefaults())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-
                 .authorizeHttpRequests(auth -> {
                     auth
-
-                            // ✅ allow UI
-                            .requestMatchers("/", "/index.html", "/**/*.html").permitAll()
+                            // ✅ Fixed the wildcard here
+                            .requestMatchers("/", "/index.html", "/static/**", "/*.html").permitAll()
                             .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**").permitAll()
-                            // Move this right after permitAll
+
                             .requestMatchers(GET, "/api/members/me").hasAnyRole("USER", "ADMIN")
 
                             // USER
-                            .requestMatchers(POST, "/api/members/self-register")
+                            .requestMatchers(POST, "/api/members/self-register").hasAnyRole("USER","ADMIN")
+                            .requestMatchers("/api/payments/**").hasAnyRole("USER","ADMIN")
+                            .requestMatchers(GET,"/api/billing/**").hasAnyRole("USER","ADMIN")
+                            .requestMatchers(GET, "/api/members/by-user/**").hasAnyRole("USER","ADMIN")
 
-                            .hasAnyRole("USER","ADMIN")
-
-                            .requestMatchers("/api/payments/**")
-                            .hasAnyRole("USER","ADMIN")
-                            // ✅ ADD BILLING ACCESS HERE
-                            .requestMatchers(GET,"/api/billing/**")
-                            .hasAnyRole("USER","ADMIN")
-
-
-                            .requestMatchers(GET, "/api/members/by-user/**")
-                            .hasAnyRole("USER","ADMIN")
-
-                            // ✅ ADD THIS
-
-                            .requestMatchers(POST, "/api/members/*/image")
-                           .hasAnyAuthority("ROLE_USER","ROLE_ADMIN","ADMIN:WRITE", "USER:WRITE")
-
+                            // ✅ Change this to match the whole path or use a double wildcard at the END
+                            .requestMatchers(POST, "/api/members/**").hasAnyAuthority("ROLE_USER","ROLE_ADMIN","ADMIN:WRITE", "USER:WRITE")
 
                             // ADMIN
-                            .requestMatchers(POST, "/api/admin/members/register")
-                            .hasAuthority("ADMIN:WRITE")
-                            // ADMIN
-                            .requestMatchers(POST, "/api/beneficiaries/**")
-                            .hasAuthority("ADMIN:WRITE")
-                            .requestMatchers(GET, "/api/beneficiaries/**")
-                            .hasAuthority("ADMIN:WRITE")
-
-                            .requestMatchers("/api/roles/**", "/api/permissions/**")
-                            .hasAnyAuthority("ADMIN:READ","ADMIN:WRITE")
-                            .requestMatchers(GET,"/api/admin/audit/**")
-                            .hasAuthority("ADMIN:READ")
+                            .requestMatchers(POST, "/api/admin/members/register").hasAuthority("ADMIN:WRITE")
+                            .requestMatchers("/api/beneficiaries/**").hasAuthority("ADMIN:WRITE")
+                            .requestMatchers("/api/roles/**", "/api/permissions/**").hasAnyAuthority("ADMIN:READ","ADMIN:WRITE")
+                            .requestMatchers(GET,"/api/admin/audit/**").hasAuthority("ADMIN:READ")
 
                             .anyRequest().authenticated();
                 })
-
-
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(auditSecurityFilter, JwtFilter.class)
-
-
                 .build();
     }
+//    public SecurityFilterChain configure(HttpSecurity http) throws Exception {
+//        return http
+//
+//                .csrf(AbstractHttpConfigurer::disable)
+//                //.cors(Customizer.withDefaults())
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//
+//
+//                .authorizeHttpRequests(auth -> {
+//                    auth
+//
+//                            // ✅ allow UI
+//                            .requestMatchers("/", "/index.html", "/**/*.html").permitAll()
+//                            .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**").permitAll()
+//                            // Move this right after permitAll
+//                            .requestMatchers(GET, "/api/members/me").hasAnyRole("USER", "ADMIN")
+//
+//                            // USER
+//                            .requestMatchers(POST, "/api/members/self-register")
+//
+//                            .hasAnyRole("USER","ADMIN")
+//
+//                            .requestMatchers("/api/payments/**")
+//                            .hasAnyRole("USER","ADMIN")
+//                            // ✅ ADD BILLING ACCESS HERE
+//                            .requestMatchers(GET,"/api/billing/**")
+//                            .hasAnyRole("USER","ADMIN")
+//
+//
+//                            .requestMatchers(GET, "/api/members/by-user/**")
+//                            .hasAnyRole("USER","ADMIN")
+//
+//                            // ✅ ADD THIS
+//
+//                            .requestMatchers(POST, "/api/members/*/image")
+//                           .hasAnyAuthority("ROLE_USER","ROLE_ADMIN","ADMIN:WRITE", "USER:WRITE")
+//
+//
+//                            // ADMIN
+//                            .requestMatchers(POST, "/api/admin/members/register")
+//                            .hasAuthority("ADMIN:WRITE")
+//                            // ADMIN
+//                            .requestMatchers(POST, "/api/beneficiaries/**")
+//                            .hasAuthority("ADMIN:WRITE")
+//                            .requestMatchers(GET, "/api/beneficiaries/**")
+//                            .hasAuthority("ADMIN:WRITE")
+//
+//                            .requestMatchers("/api/roles/**", "/api/permissions/**")
+//                            .hasAnyAuthority("ADMIN:READ","ADMIN:WRITE")
+//                            .requestMatchers(GET,"/api/admin/audit/**")
+//                            .hasAuthority("ADMIN:READ")
+//
+//                            .anyRequest().authenticated();
+//                })
+//
+//
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+//                .addFilterAfter(auditSecurityFilter, JwtFilter.class)
+//
+//
+//                .build();
+//    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
