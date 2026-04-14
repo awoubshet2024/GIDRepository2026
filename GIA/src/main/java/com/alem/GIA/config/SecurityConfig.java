@@ -55,7 +55,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // Or your specific origins
+        //configuration.setAllowedOrigins(List.of("*")); // Or your specific origins
+       configuration.setAllowedOrigins(List.of("http://localhost:4200",
+                "http://gia-angular-frontend.s3-website-us-east-1.amazonaws.com"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setMaxAge(3600L);
