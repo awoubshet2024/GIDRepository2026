@@ -52,20 +52,47 @@ public class SecurityConfig {
         this.myUserDetailsService = myUserDetailsService;
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        //configuration.setAllowedOrigins(List.of("*")); // Or your specific origins
-       configuration.setAllowedOrigins(List.of("http://localhost:4200",
-                "http://gia-angular-frontend.s3-website-us-east-1.amazonaws.com"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setMaxAge(3600L);
+//    @Bean
+//    public CorsConfigurationSource corsConfigurationSource() {
+//        CorsConfiguration configuration = new CorsConfiguration();
+//        //configuration.setAllowedOrigins(List.of("*")); // Or your specific origins
+//       configuration.setAllowedOrigins(List.of("http://localhost:4200",
+//                "http://gia-angular-frontend.s3-website-us-east-1.amazonaws.com"));
+//        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+//        configuration.setAllowedHeaders(List.of("*"));
+//        configuration.setMaxAge(3600L);
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", configuration);
+//        return source;
+//    }
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+    configuration.setAllowedOrigins(List.of(
+            "http://localhost:4200",
+            "http://gia-angular-frontend.s3-website-us-east-1.amazonaws.com"
+    ));
+
+    configuration.setAllowedMethods(List.of(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+    ));
+
+    configuration.setAllowedHeaders(List.of("*"));
+
+    configuration.setExposedHeaders(List.of("Authorization"));
+
+    configuration.setAllowCredentials(true);
+
+    configuration.setMaxAge(3600L);
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+
+    return source;
+}
+
 
     // Inner class definition
     public static class RequestLoggingFilter extends AbstractRequestLoggingFilter {
