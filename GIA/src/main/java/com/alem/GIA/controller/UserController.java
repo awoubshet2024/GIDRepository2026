@@ -20,7 +20,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("api/accounts")
-@CrossOrigin(origins = "*")
+
 @Slf4j
 public class UserController {
     private final RegistrationService registrationService;
