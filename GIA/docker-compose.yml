@@ -8,7 +8,7 @@ services:
 #      POSTGRES_PASSWORD: Dekalb14
   db:
     container_name: my-postgres
-    image: postgres
+    image: postgres:15
     restart: always
     environment:
       POSTGRES_USER: alem
@@ -18,7 +18,7 @@ services:
       - "5432:5432"
     volumes:
       # This line saves your data to a persistent volume named 'postgres_data'
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
 
 #  app:
 #    container_name: gia-app
