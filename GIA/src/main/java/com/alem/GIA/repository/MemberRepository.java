@@ -63,10 +63,12 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
 
     @Query("""
-       SELECT m FROM Member m
+       SELECT DISTINCT m FROM Member m
        LEFT JOIN FETCH m.address
        LEFT JOIN FETCH m.dependents
        LEFT JOIN FETCH m.payments
+       LEFT JOIN FETCH m.beneficiaries b
+       LEFT JOIN FETCH b.address
        WHERE m.user.id = :userId
        """)
     Optional<Member> findByUserIdWithCollections(@Param("userId") Integer userId);

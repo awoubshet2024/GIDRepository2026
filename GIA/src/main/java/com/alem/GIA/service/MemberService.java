@@ -271,7 +271,8 @@ public class MemberService {
 
     @Transactional
     public Optional<Member> getByUserIdWithCollections(Integer userId) {
-        return memberRepository.findByUserIdWithCollections(userId);
+       return memberRepository.findByUserIdWithCollections(userId);
+       // return memberRepository.findMemberWithBeneficiariesByMemberId(userId);
     }
 
     @Transactional(readOnly = true)
