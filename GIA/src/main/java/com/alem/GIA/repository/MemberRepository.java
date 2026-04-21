@@ -35,6 +35,7 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
 
     Optional<Member> findMemberByEmail(String email);
+    Optional<Member>findByEmailIgnoreCase(String email);
 
     boolean existsByEmail(String email);
 

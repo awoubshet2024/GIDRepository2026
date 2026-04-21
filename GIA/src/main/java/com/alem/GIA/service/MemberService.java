@@ -104,16 +104,29 @@ public class MemberService {
 
         for (Row row : sheet) {
 
+
             if (row.getRowNum() == 0) continue;
+            String emailRaw = getCellValue(row.getCell(0));
 
-            String email = getCellValue(row.getCell(0));
+            if (emailRaw == null || emailRaw.isBlank()) continue;
 
-            if (email.isEmpty()) continue;
+            // 🔥 NORMALIZE HERE
+            String email = emailRaw.trim().toLowerCase();
+
+
+
+
+          //  if (email.isEmpty()) continue;
 
 
             // Fetch from DB OR create new
-            Member member = memberRepository.findByEmail(email).orElseGet(Member::new);
-             email = getCellValue(row.getCell(0));
+           // Member member = memberRepository.findByEmail(email).orElseGet(Member::new);
+            Member member = memberRepository
+                    .findByEmailIgnoreCase(email)
+                    .orElseGet(Member::new);
+
+           // member.setEmail(email);
+          //  email = getCellValue(row.getCell(0)).trim().toLowerCase();
             member.setFirstName(getCellValue(row.getCell(1)));
             member.setLastName(getCellValue(row.getCell(2)));
             member.setEmail(email);
@@ -673,11 +686,28 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
+//    public void linkMemberIfExists(ApplicationUser user) {
+//
+//        memberRepository
+//                .findMemberByEmail(user.getEmail())
+//                .ifPresent(member -> {
+//                    member.setUser(user);
+//                    memberRepository.save(member);
+//                });
+//    }
+    @Transactional
     public void linkMemberIfExists(ApplicationUser user) {
 
-        memberRepository
-                .findMemberByEmail(user.getEmail())
+        if (user == null || user.getEmail() == null) return;
+
+        String email = user.getEmail().trim().toLowerCase();
+
+        memberRepository.findByEmailIgnoreCase(email)
                 .ifPresent(member -> {
+
+                    // ✅ already linked? skip
+                    if (member.getUser() != null) return;
+
                     member.setUser(user);
                     memberRepository.save(member);
                 });

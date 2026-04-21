@@ -30,7 +30,8 @@ public class RegistrationService {
         TempUser tempUser = TempUser.builder()
                 .userName(dto.getUserName())
                 .password(passwordEncoder.encode(dto.getPassword()))
-                .email(dto.getEmail())
+                //email trim fixed
+                .email(dto.getEmail().trim().toLowerCase())
                 .fullName(dto.getFullName())
                 .phone(dto.getPhone())
                 .build();
