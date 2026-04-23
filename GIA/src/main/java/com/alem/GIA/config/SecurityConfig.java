@@ -146,7 +146,7 @@ public CorsConfigurationSource corsConfigurationSource() {
                     auth
                             // ✅ Fixed the wildcard here
                            // .requestMatchers("/", "/index.html", "/static/**", "/*.html").permitAll()
-                            .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**","/actuator/**").permitAll()
+                            .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**","/actuator/health","/actuator/info").permitAll()
 
                             .requestMatchers(GET, "/api/members/me").hasAnyRole("USER", "ADMIN")
 
