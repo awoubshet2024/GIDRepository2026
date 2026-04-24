@@ -7,6 +7,8 @@ import com.alem.GIA.service.MyUserDetailsService;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
+//import org.springframework.boot.actuate.autoconfigure.security.reactive.EndpointRequest;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -146,7 +148,9 @@ public CorsConfigurationSource corsConfigurationSource() {
                     auth
                             // ✅ Fixed the wildcard here
                            // .requestMatchers("/", "/index.html", "/static/**", "/*.html").permitAll()
-                            .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**","/actuator/health","/actuator/info").permitAll()
+
+                            .requestMatchers(EndpointRequest.to("health", "info")).permitAll()
+                            .requestMatchers("/api/accounts/**","/api/auth/**", "/css/**", "/js/**").permitAll()
 
                             .requestMatchers(GET, "/api/members/me").hasAnyRole("USER", "ADMIN")
 
