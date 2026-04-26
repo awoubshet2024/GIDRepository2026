@@ -92,15 +92,16 @@ public class PaymentController {
     public List<PaymentSummaryDto> getPaymentsByMaritalStatus() {
         return paymentService.getPaymentsGroupedByMaritalStatus();
     }
+
     @GetMapping("/analytics")
     public List<PaymentAnalyticsDto> getAnalytics() {
         return paymentService.getPaymentAnalytics();
     }
+
     @GetMapping("/balance")
     public ResponseEntity<Map<String, Object>> getMemberBalance(@RequestParam Integer memberId) {
 
         Map<String, Object> response = new HashMap<>();
-
         response.put("memberId", memberId);
         response.put("balance", paymentService.getMemberBalance(memberId));
 

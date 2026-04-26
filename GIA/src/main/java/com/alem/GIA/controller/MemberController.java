@@ -48,14 +48,7 @@ public class MemberController {
         this.userService = userService;
         this.memberMapper = memberMapper;
     }
-//    @PostMapping("/import-members")
-//    public ResponseEntity<String> importMembers(@RequestParam("file") MultipartFile file) {
-//
-//        memberService.importMembersFromExcel(file);
-//
-//        return ResponseEntity.ok("Members imported successfully");
-//
-//    }
+
     @PostMapping("/import-members")
     public ResponseEntity<Map<String,String>> importMembers(@RequestParam("file") MultipartFile file) {
 

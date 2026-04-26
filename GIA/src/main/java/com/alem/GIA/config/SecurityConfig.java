@@ -74,7 +74,8 @@ public CorsConfigurationSource corsConfigurationSource() {
 
     configuration.setAllowedOrigins(List.of(
             "http://localhost:4200",
-            "http://gia-angular-frontend.s3-website-us-east-1.amazonaws.com"
+            "http://gia-angular-frontend.s3-website-us-east-1.amazonaws.com",
+            "https://www.gid-eth.com"
     ));
 
     configuration.setAllowedMethods(List.of(

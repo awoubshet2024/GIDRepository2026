@@ -95,14 +95,14 @@ public class UserController {
     public UserRegistrationResponse register(@RequestBody UserDto dto) {
         return registrationService.register(dto);
 
-       // return userService.register(dto);
+
     }
 
     @PostMapping("/confirm")
     public ConfirmOtpDto confirmOtp(@RequestBody OtpMgtDto otpMgtDto){
         return registrationService.confirmRegistration(otpMgtDto);
 
-       // return userService.confirmReg(otpMgtDto);
+
     }
 
 
