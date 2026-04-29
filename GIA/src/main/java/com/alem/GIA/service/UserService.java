@@ -297,62 +297,117 @@ public class UserService {
     }
 
 
-    public TokenResponse authenticate(String userName, String password) {
-        ApplicationUser appUser = findUserByUserName(userName);
+//    public TokenResponse authenticate(String userName, String password) {
+//        ApplicationUser appUser = findUserByUserName(userName);
+//
+//        if (!Boolean.TRUE.equals(appUser.getStatus())) {
+//            throw new DisabledException("User account is disabled");
+//        }
+//
+//        Set<RoleDto> rolesDto = RoleDto.from(appUser.getRoles());
+//
+//      /*  Set<SimpleGrantedAuthority> auths = appUser.getRoles().stream()
+//                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.getRoleName()))
+//                .collect(Collectors.toSet());*/
+//        Set<SimpleGrantedAuthority> auths =
+//                appUser.getRoles().stream()
+//                        .flatMap(role -> Stream.concat(
+//                                Stream.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName())),
+//                                role.getPermissions().stream()
+//                                        .map(p -> new SimpleGrantedAuthority(p.getPermissionName()))
+//                        ))
+//                        .collect(Collectors.toSet());
+//
+//
+//        Authentication authentication =
+//                auth.authenticate(new UsernamePasswordAuthenticationToken(userName, password));
+//
+//        AuthenticatedUser principal = (AuthenticatedUser) authentication.getPrincipal();
+//        ApplicationUser user = principal.getUser();
+//        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+//        // Extract only permissions and role names for frontend
+//        Set<String> permissionNames = appUser.getRoles().stream()
+//                .flatMap(r -> r.getPermissions().stream())
+//                .map(Permission::getPermissionName)
+//                .collect(Collectors.toSet());
+//
+//        Set<String> authorityNames = authorities.stream()
+//                .map(GrantedAuthority::getAuthority)
+//                .collect(Collectors.toSet());
+//
+//        Token token = Token.builder()
+//                //.token(jwtService.generateToken(appUser, authorities))
+//                .token(jwtService.generateToken(appUser, auths))
+//
+//                .build();
+//
+//        return TokenResponse.builder()
+//                .userId(appUser.getId())
+//                .email(appUser.getEmail())
+//                .userName(appUser.getUserName())
+//                .token(token)
+//                .status(true)
+//                .message("Authenticated successfully")
+//                .permissions(permissionNames)
+//                .authorities(authorityNames)
+//                .roles(rolesDto)
+//                .build();
+//    }
+public TokenResponse authenticate(String userName, String password) {
+    ApplicationUser appUser = findUserByUserName(userName);
 
-        if (!Boolean.TRUE.equals(appUser.getStatus())) {
-            throw new DisabledException("User account is disabled");
-        }
-
-        Set<RoleDto> rolesDto = RoleDto.from(appUser.getRoles());
-
-      /*  Set<SimpleGrantedAuthority> auths = appUser.getRoles().stream()
-                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.getRoleName()))
-                .collect(Collectors.toSet());*/
-        Set<SimpleGrantedAuthority> auths =
-                appUser.getRoles().stream()
-                        .flatMap(role -> Stream.concat(
-                                Stream.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName())),
-                                role.getPermissions().stream()
-                                        .map(p -> new SimpleGrantedAuthority(p.getPermissionName()))
-                        ))
-                        .collect(Collectors.toSet());
-
-
-        Authentication authentication =
-                auth.authenticate(new UsernamePasswordAuthenticationToken(userName, password));
-
-        AuthenticatedUser principal = (AuthenticatedUser) authentication.getPrincipal();
-        ApplicationUser user = principal.getUser();
-        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        // Extract only permissions and role names for frontend
-        Set<String> permissionNames = appUser.getRoles().stream()
-                .flatMap(r -> r.getPermissions().stream())
-                .map(Permission::getPermissionName)
-                .collect(Collectors.toSet());
-
-        Set<String> authorityNames = authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toSet());
-
-        Token token = Token.builder()
-                //.token(jwtService.generateToken(appUser, authorities))
-                .token(jwtService.generateToken(appUser, auths))
-
-                .build();
-
-        return TokenResponse.builder()
-                .userId(appUser.getId())
-                .email(appUser.getEmail())
-                .userName(appUser.getUserName())
-                .token(token)
-                .status(true)
-                .message("Authenticated successfully")
-                .permissions(permissionNames)
-                .authorities(authorityNames)
-                .roles(rolesDto)
-                .build();
+    if (!Boolean.TRUE.equals(appUser.getStatus())) {
+        throw new DisabledException("User account is disabled");
     }
+
+    Set<RoleDto> rolesDto = RoleDto.from(appUser.getRoles());
+
+    Set<SimpleGrantedAuthority> auths =
+            appUser.getRoles().stream()
+                    .flatMap(role -> Stream.concat(
+                            Stream.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName())),
+                            role.getPermissions().stream()
+                                    .map(p -> new SimpleGrantedAuthority(p.getPermissionName()))
+                    ))
+                    .collect(Collectors.toSet());
+
+    Authentication authentication =
+            auth.authenticate(new UsernamePasswordAuthenticationToken(userName, password));
+
+    AuthenticatedUser principal = (AuthenticatedUser) authentication.getPrincipal();
+    ApplicationUser user = principal.getUser();
+    Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+
+    // Extract only permissions and role names for frontend
+    Set<String> permissionNames = appUser.getRoles().stream()
+            .flatMap(r -> r.getPermissions().stream())
+            .map(Permission::getPermissionName)
+            .collect(Collectors.toSet());
+
+    Set<String> authorityNames = authorities.stream()
+            .map(GrantedAuthority::getAuthority)
+            .collect(Collectors.toSet());
+
+    // ✅ Merge permission names into authorities so frontend can check them directly
+    Set<String> combinedAuthorities = new HashSet<>(authorityNames);
+    combinedAuthorities.addAll(permissionNames);
+
+    Token token = Token.builder()
+            .token(jwtService.generateToken(appUser, auths))
+            .build();
+
+    return TokenResponse.builder()
+            .userId(appUser.getId())
+            .email(appUser.getEmail())
+            .userName(appUser.getUserName())
+            .token(token)
+            .status(true)
+            .message("Authenticated successfully")
+            .permissions(permissionNames)
+            .authorities(combinedAuthorities)   // <-- now includes both roles and permissions
+            .roles(rolesDto)
+            .build();
+}
 
 
     public UserDto addRoleToUser(Integer userId, Integer roleId) {

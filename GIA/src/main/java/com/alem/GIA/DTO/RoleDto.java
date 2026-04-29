@@ -23,11 +23,7 @@ public class RoleDto {
 
         this.roleName = roleName;
     }
-    /*public RoleDto(Integer roleId,String roleName, Set<PermissionDto> permissions) {
-        this.roleId = roleId;
-        this.roleName = roleName;
-        this.permissions = permissions;
-    }*/
+
     public RoleDto(String roleName, Set<PermissionDto> permissions) {
 
         this.roleName = roleName;
@@ -43,9 +39,7 @@ public class RoleDto {
             RoleDto roleDto = new RoleDto();
             roleDto.setRoleId(role.getId());
             roleDto.setRoleName(role.getRoleName());
-            /*Set<PermissionDto> permissionDtos = role.getPermissions().stream().map(
-                    p -> new PermissionDto(roleDto.getRoleName())
-            ).collect(Collectors.toSet());*/
+
             roleDto.setPermissions(role.getPermissions().stream().map(
                     PermissionDto::fromEntity
                   //  p -> new PermissionDto(p.getId(), p.getPermissionName())

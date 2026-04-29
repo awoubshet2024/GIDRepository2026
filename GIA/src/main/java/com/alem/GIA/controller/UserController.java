@@ -69,27 +69,40 @@ public class UserController {
 
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-
-        try {
-            TokenResponse response = userService.authenticate(
-                    loginRequest.getUserName(),
-                    loginRequest.getPassword()
-            );
-            return ResponseEntity.ok(response);
-        } catch (DisabledException e) {
-
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is Disabled");
+//    @PostMapping("/login")
+//    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+//
+//        try {
+//            TokenResponse response = userService.authenticate(
+//                    loginRequest.getUserName(),
+//                    loginRequest.getPassword()
+//            );
+//            return ResponseEntity.ok(response);
+//        } catch (DisabledException e) {
+//
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is Disabled");
+//        }
+//        catch (BadCredentialsException e) {
+//
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+//        }
+//    }
+@PostMapping("/login")
+public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+    try {
+        TokenResponse response = userService.authenticate( loginRequest.getUserName(),
+                   loginRequest.getPassword());
+        // Merge permissions into authorities
+        if (response.getPermissions() != null) {
+            response.getAuthorities().addAll(response.getPermissions());
         }
-        catch (BadCredentialsException e) {
-           /*AuthenticatedUser authUser= (AuthenticatedUser) SecurityContextHolder
-                    .getContext().getAuthentication().getPrincipal();
-            System.out.println("Authenticated user:" + authUser.getUsername());*/
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-        }
-       // return ResponseEntity.ok(userService.authenticate(loginRequest));
+        return ResponseEntity.ok(response);
+    } catch (DisabledException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is Disabled");
+    } catch (BadCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
     }
+}
 
     @PostMapping("/register")
     public UserRegistrationResponse register(@RequestBody UserDto dto) {
