@@ -4,6 +4,7 @@ import com.alem.GIA.DTO.MemberDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 import com.alem.GIA.annotation.Auditable;
@@ -78,10 +79,7 @@ public class MemberService {
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
 
             Map<String, Member> memberMap = new HashMap<>();
-        /*    importMembers(workbook.getSheetAt(0), memberMap);
-            importDependents(workbook.getSheetAt(1), memberMap);
-            importPayments(workbook.getSheetAt(2), memberMap);      // ✅ Payments sheet
-            importBeneficiaries(workbook.getSheetAt(3), memberMap);*/ // ✅ Beneficiaries sheet
+
             Sheet membersSheet = workbook.getSheet("Members");
             Sheet dependentsSheet = workbook.getSheet("Dependents");
             Sheet paymentsSheet = workbook.getSheet("Payments");
@@ -113,20 +111,9 @@ public class MemberService {
             // 🔥 NORMALIZE HERE
             String email = emailRaw.trim().toLowerCase();
 
-
-
-
-          //  if (email.isEmpty()) continue;
-
-
-            // Fetch from DB OR create new
-           // Member member = memberRepository.findByEmail(email).orElseGet(Member::new);
             Member member = memberRepository
                     .findByEmailIgnoreCase(email)
                     .orElseGet(Member::new);
-
-           // member.setEmail(email);
-          //  email = getCellValue(row.getCell(0)).trim().toLowerCase();
             member.setFirstName(getCellValue(row.getCell(1)));
             member.setLastName(getCellValue(row.getCell(2)));
             member.setEmail(email);
@@ -157,9 +144,15 @@ public class MemberService {
 
             if (row.getRowNum() == 0) continue;
 
+           // String email = getCellValue(row.getCell(0));
+            // Add this in importDependents, importPayments, importBeneficiaries
             String email = getCellValue(row.getCell(0));
+            if (email == null) continue;
+            email = email.trim().toLowerCase(); // ← missing in your other import methods!
 
             Member member = memberMap.get(email);
+
+          //  Member member = memberMap.get(email);
 
             if (member == null) continue;
 
@@ -184,7 +177,13 @@ public class MemberService {
 
             if (row.getRowNum() == 0) continue;
 
+           // String email = getCellValue(row.getCell(0));
+
+            //Member member = memberMap.get(email);
+            // Add this in importDependents, importPayments, importBeneficiaries
             String email = getCellValue(row.getCell(0));
+            if (email == null) continue;
+            email = email.trim().toLowerCase(); // ← missing in your other import methods!
 
             Member member = memberMap.get(email);
 
@@ -212,7 +211,13 @@ public class MemberService {
 
             if (row.getRowNum() == 0) continue;
 
+           // String email = getCellValue(row.getCell(0));
+
+           // Member member = memberMap.get(email);
+            // Add this in importDependents, importPayments, importBeneficiaries
             String email = getCellValue(row.getCell(0));
+            if (email == null) continue;
+            email = email.trim().toLowerCase(); // ← missing in your other import methods!
 
             Member member = memberMap.get(email);
 
@@ -686,15 +691,7 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
-//    public void linkMemberIfExists(ApplicationUser user) {
-//
-//        memberRepository
-//                .findMemberByEmail(user.getEmail())
-//                .ifPresent(member -> {
-//                    member.setUser(user);
-//                    memberRepository.save(member);
-//                });
-//    }
+
     @Transactional
     public void linkMemberIfExists(ApplicationUser user) {
 
@@ -786,36 +783,61 @@ public class MemberService {
                 return "";
         }
     }
-    private LocalDate getLocalDate(Cell cell) {
+//    private LocalDate getLocalDate(Cell cell) {
+//
+//        if (cell == null) return null;
+//
+//        try {
+//
+//            if (cell.getCellType() == CellType.NUMERIC) {
+//
+//                return cell.getLocalDateTimeCellValue().toLocalDate();
+//
+//            }
+//
+//            if (cell.getCellType() == CellType.STRING) {
+//
+//                String value = cell.getStringCellValue();
+//
+//                if (value == null || value.isEmpty()) return null;
+//
+//                return LocalDate.parse(value);
+//
+//            }
+//
+//        } catch (Exception e) {
+//
+//            System.out.println("Invalid date format: " + cell);
+//
+//        }
+//
+//        return null;
+//    }
+private LocalDate getLocalDate(Cell cell) {
+    if (cell == null) return null;
 
-        if (cell == null) return null;
-
-        try {
-
-            if (cell.getCellType() == CellType.NUMERIC) {
-
-                return cell.getLocalDateTimeCellValue().toLocalDate();
-
-            }
-
-            if (cell.getCellType() == CellType.STRING) {
-
-                String value = cell.getStringCellValue();
-
-                if (value == null || value.isEmpty()) return null;
-
-                return LocalDate.parse(value);
-
-            }
-
-        } catch (Exception e) {
-
-            System.out.println("Invalid date format: " + cell);
-
-        }
-
-        return null;
+    // ✅ Handles properly formatted date cells
+    if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+        return cell.getLocalDateTimeCellValue().toLocalDate();
     }
+
+    // ✅ Handles Excel serial numbers stored as plain numbers
+    if (cell.getCellType() == CellType.NUMERIC) {
+        return DateUtil.getJavaDate(cell.getNumericCellValue())
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+    }
+
+    // ✅ Handles string dates like "1985-05-10"
+    if (cell.getCellType() == CellType.STRING) {
+        String val = cell.getStringCellValue().trim();
+        if (val.isBlank()) return null;
+        return LocalDate.parse(val);
+    }
+
+    return null;
+}
 }
 
 
