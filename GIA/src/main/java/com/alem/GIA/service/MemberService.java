@@ -39,6 +39,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.*;
 
@@ -73,30 +74,181 @@ public class MemberService {
 
 
 
-    @Transactional
-    public void importMembersFromExcel(MultipartFile file) {
+//    @Transactional
+//    public void importMembersFromExcel(MultipartFile file) {
+//
+//        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+//
+//            Map<String, Member> memberMap = new HashMap<>();
+//
+//            Sheet membersSheet = workbook.getSheet("Members");
+//            Sheet dependentsSheet = workbook.getSheet("Dependents");
+//            Sheet paymentsSheet = workbook.getSheet("Payments");
+//            Sheet beneficiariesSheet = workbook.getSheet("Beneficiaries");
+//
+//            if(membersSheet != null) importMembers(membersSheet, memberMap);
+//            if(dependentsSheet != null) importDependents(dependentsSheet, memberMap);
+//            if(paymentsSheet != null) importPayments(paymentsSheet, memberMap);
+//            if(beneficiariesSheet != null) importBeneficiaries(beneficiariesSheet, memberMap);
+//
+//
+//            // FINAL SAVE → persists dependents & beneficiaries via cascade
+//            memberRepository.saveAll(memberMap.values());
+//
+//        } catch (Exception e) {
+//            throw new RuntimeException("Excel import failed: " + e.getMessage(), e);
+//        }
+//    }
+public Map<String, Object> importMembersFromExcel(MultipartFile file) {
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+    int successCount = 0;
+    int failureCount = 0;
+    List<String> errors = new ArrayList<>();
 
-            Map<String, Member> memberMap = new HashMap<>();
+    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
 
-            Sheet membersSheet = workbook.getSheet("Members");
-            Sheet dependentsSheet = workbook.getSheet("Dependents");
-            Sheet paymentsSheet = workbook.getSheet("Payments");
-            Sheet beneficiariesSheet = workbook.getSheet("Beneficiaries");
+        Sheet paymentSheet = workbook.getSheet("Payments"); // adjust if needed
 
-            if(membersSheet != null) importMembers(membersSheet, memberMap);
-            if(dependentsSheet != null) importDependents(dependentsSheet, memberMap);
-            if(paymentsSheet != null) importPayments(paymentsSheet, memberMap);
-            if(beneficiariesSheet != null) importBeneficiaries(beneficiariesSheet, memberMap);
-
-
-            // FINAL SAVE → persists dependents & beneficiaries via cascade
-            memberRepository.saveAll(memberMap.values());
-
-        } catch (Exception e) {
-            throw new RuntimeException("Excel import failed: " + e.getMessage(), e);
+        if (paymentSheet == null) {
+            throw new RuntimeException("Sheet 'Payments' not found");
         }
+
+        Map<String, Member> memberMap = memberRepository.findAll()
+                .stream()
+                .collect(Collectors.toMap(
+                        m -> m.getEmail().trim().toLowerCase(),
+                        m -> m
+                ));
+
+        for (Row row : paymentSheet) {
+
+            if (row.getRowNum() == 0) continue;
+
+            try {
+                processPaymentRow(row, memberMap);
+                successCount++;
+
+            } catch (Exception e) {
+                failureCount++;
+
+                String errorMsg = "Row " + row.getRowNum() + ": " + e.getMessage();
+                errors.add(errorMsg);
+
+                System.err.println(errorMsg);
+            }
+        }
+
+    } catch (Exception e) {
+        throw new RuntimeException("Failed to process Excel file: " + e.getMessage(), e);
+    }
+
+    Map<String, Object> response = new HashMap<>();
+    response.put("successCount", successCount);
+    response.put("failureCount", failureCount);
+    response.put("errors", errors);
+    response.put("message", "Import completed");
+
+    return response;
+}
+    private void processPaymentRow(Row row, Map<String, Member> memberMap) {
+
+        String email = getString(row.getCell(0), true);
+
+        Member member = memberMap.get(email);
+        if (member == null) {
+            throw new RuntimeException("Member not found for email: " + email);
+        }
+
+        Payment payment = new Payment();
+
+        // Amount
+        String amountStr = getString(row.getCell(1), false);
+        BigDecimal amount;
+
+        if (amountStr != null) {
+            amountStr = amountStr.replace(",", "").trim();
+            amount = new BigDecimal(amountStr);
+        } else {
+            BillingSummary summary = billingService.calculateBillingSummary(member);
+            amount = summary.getSuggestedPayment();
+        }
+        payment.setAmount(amount);
+
+        // Reason
+        payment.setReason(getString(row.getCell(2), false));
+
+        // Date
+        payment.setPaymentDate(getDate(row.getCell(3)));
+
+        // Enums (SAFE)
+        payment.setBillingPeriod(parseEnum(
+                BillingPeriod.class,
+                getString(row.getCell(4), true),
+                "Invalid BillingPeriod"
+        ));
+
+        payment.setPaymentMethod(parseEnum(
+                PaymentMethod.class,
+                getString(row.getCell(5), true),
+                "Invalid PaymentMethod"
+        ));
+
+        // Optional fields
+        payment.setCheckNumber(getString(row.getCell(6), false));
+        payment.setCardLast4(getString(row.getCell(7), false));
+        payment.setStatus(getString(row.getCell(8), false));
+        payment.setInvoiceNumber(getString(row.getCell(9), false));
+
+        String invoiceIssuedStr = getString(row.getCell(10), false);
+        payment.setInvoiceIssued(Boolean.parseBoolean(invoiceIssuedStr));
+
+        member.addPayment(payment);
+    }
+    private <T extends Enum<T>> T parseEnum(Class<T> enumClass, String value, String errorMessage) {
+
+        if (value == null) {
+            throw new RuntimeException(errorMessage + ": value is null");
+        }
+
+        try {
+            return Enum.valueOf(enumClass, value.trim().toUpperCase());
+        } catch (Exception e) {
+            throw new RuntimeException(errorMessage + ": " + value);
+        }
+    }
+    private String getString(Cell cell, boolean required) {
+
+        if (cell == null) {
+            if (required) throw new RuntimeException("Required cell is missing");
+            return null;
+        }
+
+        String value;
+
+        switch (cell.getCellType()) {
+            case STRING:
+                value = cell.getStringCellValue();
+                break;
+            case NUMERIC:
+                value = String.valueOf(cell.getNumericCellValue());
+                break;
+            case BOOLEAN:
+                value = String.valueOf(cell.getBooleanCellValue());
+                break;
+            default:
+                value = null;
+        }
+
+        if (value != null) {
+            value = value.trim();
+            if (value.isEmpty()) value = null;
+        }
+
+        if (required && value == null) {
+            throw new RuntimeException("Required cell is empty");
+        }
+
+        return value != null ? value.toLowerCase() : null;
     }
     private void importMembers(Sheet sheet, Map<String, Member> memberMap) {
 
@@ -813,6 +965,21 @@ public class MemberService {
 //
 //        return null;
 //    }
+private LocalDate getDate(Cell cell) {
+
+    if (cell == null) return null;
+
+    try {
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return cell.getLocalDateTimeCellValue().toLocalDate();
+        } else {
+            String dateStr = cell.getStringCellValue().trim();
+            return LocalDate.parse(dateStr); // expects ISO format
+        }
+    } catch (Exception e) {
+        throw new RuntimeException("Invalid date format");
+    }
+}
 private LocalDate getLocalDate(Cell cell) {
     if (cell == null) return null;
 
