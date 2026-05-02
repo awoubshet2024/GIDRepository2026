@@ -74,82 +74,73 @@ public class MemberService {
 
 
 
-//    @Transactional
-//    public void importMembersFromExcel(MultipartFile file) {
-//
-//        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-//
-//            Map<String, Member> memberMap = new HashMap<>();
-//
-//            Sheet membersSheet = workbook.getSheet("Members");
-//            Sheet dependentsSheet = workbook.getSheet("Dependents");
-//            Sheet paymentsSheet = workbook.getSheet("Payments");
-//            Sheet beneficiariesSheet = workbook.getSheet("Beneficiaries");
-//
-//            if(membersSheet != null) importMembers(membersSheet, memberMap);
-//            if(dependentsSheet != null) importDependents(dependentsSheet, memberMap);
-//            if(paymentsSheet != null) importPayments(paymentsSheet, memberMap);
-//            if(beneficiariesSheet != null) importBeneficiaries(beneficiariesSheet, memberMap);
-//
-//
-//            // FINAL SAVE → persists dependents & beneficiaries via cascade
-//            memberRepository.saveAll(memberMap.values());
-//
-//        } catch (Exception e) {
-//            throw new RuntimeException("Excel import failed: " + e.getMessage(), e);
-//        }
-//    }
-public Map<String, Object> importMembersFromExcel(MultipartFile file) {
+    @Transactional
+    public void importMembersFromExcel(MultipartFile file) {
 
-    int successCount = 0;
-    int failureCount = 0;
-    List<String> errors = new ArrayList<>();
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
 
-    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Map<String, Member> memberMap = new HashMap<>();
 
-        Sheet paymentSheet = workbook.getSheet("Payments"); // adjust if needed
+            Sheet membersSheet = workbook.getSheet("Members");
+            Sheet dependentsSheet = workbook.getSheet("Dependents");
+            Sheet paymentsSheet = workbook.getSheet("Payments");
+            Sheet beneficiariesSheet = workbook.getSheet("Beneficiaries");
 
-        if (paymentSheet == null) {
-            throw new RuntimeException("Sheet 'Payments' not found");
+            if(membersSheet != null) importMembers(membersSheet, memberMap);
+            if(dependentsSheet != null) importDependents(dependentsSheet, memberMap);
+            if(paymentsSheet != null) importPayments(paymentsSheet, memberMap);
+            if(beneficiariesSheet != null) importBeneficiaries(beneficiariesSheet, memberMap);
+
+
+            // FINAL SAVE → persists dependents & beneficiaries via cascade
+            memberRepository.saveAll(memberMap.values());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Excel import failed: " + e.getMessage(), e);
         }
-
-        Map<String, Member> memberMap = memberRepository.findAll()
-                .stream()
-                .collect(Collectors.toMap(
-                        m -> m.getEmail().trim().toLowerCase(),
-                        m -> m
-                ));
-
-        for (Row row : paymentSheet) {
-
-            if (row.getRowNum() == 0) continue;
-
-            try {
-                processPaymentRow(row, memberMap);
-                successCount++;
-
-            } catch (Exception e) {
-                failureCount++;
-
-                String errorMsg = "Row " + row.getRowNum() + ": " + e.getMessage();
-                errors.add(errorMsg);
-
-                System.err.println(errorMsg);
-            }
-        }
-
-    } catch (Exception e) {
-        throw new RuntimeException("Failed to process Excel file: " + e.getMessage(), e);
     }
 
-    Map<String, Object> response = new HashMap<>();
-    response.put("successCount", successCount);
-    response.put("failureCount", failureCount);
-    response.put("errors", errors);
-    response.put("message", "Import completed");
-
-    return response;
-}
+//@Transactional
+//public Map<String, Object> importAllFromExcel(MultipartFile file) {
+//
+//    int success = 0;
+//    int failed = 0;
+//    List<String> errors = new ArrayList<>();
+//
+//    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+//
+//        Sheet memberSheet = workbook.getSheet("Members");
+//        Sheet paymentSheet = workbook.getSheet("Payments");
+//        Sheet depSheet = workbook.getSheet("Dependents");
+//        Sheet benSheet = workbook.getSheet("Beneficiaries");
+//
+//        if (memberSheet == null) throw new RuntimeException("Members sheet missing");
+//
+//        // 1. LOAD OR CREATE MEMBERS MAP
+//        Map<String, Member> memberMap = loadMembers(memberSheet);
+//
+//        // 2. ATTACH CHILD DATA
+//        attachDependents(depSheet, memberMap, errors);
+//        attachBeneficiaries(benSheet, memberMap, errors);
+//        attachPayments(paymentSheet, memberMap, errors);
+//
+//        // 3. SAVE EVERYTHING
+//        memberRepository.saveAll(memberMap.values());
+//
+//        success = memberMap.size();
+//
+//    } catch (Exception e) {
+//        throw new RuntimeException("Import failed: " + e.getMessage(), e);
+//    }
+//
+//    Map<String, Object> response = new HashMap<>();
+//    response.put("successCount", success);
+//    response.put("failureCount", failed);
+//    response.put("errors", errors);
+//    response.put("message", "Import completed");
+//
+//    return response;
+//}
     private void processPaymentRow(Row row, Map<String, Member> memberMap) {
 
         String email = getString(row.getCell(0), true);
@@ -250,12 +241,24 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
 
         return value != null ? value.toLowerCase() : null;
     }
+    private boolean isHeaderRow(Row row) {
+        Cell firstCell = row.getCell(0);
+        if (firstCell == null) return true;
+
+        String value = firstCell.toString().trim().toLowerCase();
+
+        return value.equals("email") ||
+                value.equals("email address") ||
+                value.equals("e-mail");
+    }
     private void importMembers(Sheet sheet, Map<String, Member> memberMap) {
 
         for (Row row : sheet) {
 
 
-            if (row.getRowNum() == 0) continue;
+            //if (row.getRowNum() == 0) continue;
+            if (row == null || isHeaderRow(row)) continue;
+
             String emailRaw = getCellValue(row.getCell(0));
 
             if (emailRaw == null || emailRaw.isBlank()) continue;
@@ -290,11 +293,13 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
         }
     }
 
+
     private void importDependents(Sheet sheet, Map<String, Member> memberMap) {
 
         for (Row row : sheet) {
 
-            if (row.getRowNum() == 0) continue;
+            //if (row.getRowNum() == 0) continue;
+            if (row == null || isHeaderRow(row)) continue;
 
            // String email = getCellValue(row.getCell(0));
             // Add this in importDependents, importPayments, importBeneficiaries
@@ -306,7 +311,10 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
 
           //  Member member = memberMap.get(email);
 
-            if (member == null) continue;
+            //if (member == null) continue;
+            if (member == null) {
+                throw new RuntimeException("Member not found: " + email);
+            }
 
             Dependent dep = new Dependent();
 
@@ -321,13 +329,48 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
             dep.setDateOfBirth(getLocalDate(row.getCell(5)));
 
             member.addDependent(dep);
+
+
         }
     }
+//private void attachDependents(Sheet sheet, Map<String, Member> map, List<String> errors) {
+//
+//   if (sheet == null) return;
+//
+//   for (Row row : sheet) {
+//
+//       if (row == null || row.getRowNum() == 0) continue;
+//
+//      try {
+//          String email = getString(row.getCell(0), true).trim().toLowerCase();
+//           Member member = map.get(email);
+//
+//            if (member == null) {
+//               errors.add("Dependent: member not found " + email);
+//                continue;
+//            }
+//
+//            Dependent d = new Dependent();
+//           d.setFirstName(getString(row.getCell(1), true));
+//            d.setLastName(getString(row.getCell(2), true));
+//           d.setGender(getString(row.getCell(3), false));
+//          d.setRelationship(Relationship.valueOf(getString(row.getCell(4), true).toUpperCase()));
+//           d.setDateOfBirth(getLocalDate(row.getCell(5)));
+//
+//           member.addDependent(d); // IMPORTANT (handles both sides)
+//
+//       } catch (Exception e) {
+//           errors.add("Dependent row " + row.getRowNum() + ": " + e.getMessage());
+//       }
+//   }
+//}
+
     private void importBeneficiaries(Sheet sheet, Map<String, Member> memberMap) {
 
         for (Row row : sheet) {
 
-            if (row.getRowNum() == 0) continue;
+           // if (row.getRowNum() == 0) continue;
+            if (row == null || isHeaderRow(row)) continue;
 
            // String email = getCellValue(row.getCell(0));
 
@@ -339,7 +382,10 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
 
             Member member = memberMap.get(email);
 
-            if (member == null) continue;
+            //if (member == null) continue;
+            if (member == null) {
+                throw new RuntimeException("Member not found: " + email);
+            }
 
             Beneficiary ben = new Beneficiary();
 
@@ -355,25 +401,95 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
             );
 
             member.addBeneficiary(ben);
+
         }
     }
+//private void attachBeneficiaries(Sheet sheet, Map<String, Member> map, List<String> errors) {
+//
+//    if (sheet == null) return;
+//
+//    for (Row row : sheet) {
+//
+//        if (row == null || row.getRowNum() == 0) continue;
+//
+//        try {
+//            String email = getString(row.getCell(0), true).trim().toLowerCase();
+//            Member member = map.get(email);
+//
+//            if (member == null) {
+//                errors.add("Beneficiary: member not found " + email);
+//                continue;
+//            }
+//
+//            Beneficiary b = new Beneficiary();
+//            b.setFirstName(getString(row.getCell(1), true));
+//            b.setLastName(getString(row.getCell(2), true));
+//            b.setRelationship(Relationship.valueOf(getString(row.getCell(3), true).toUpperCase()));
+//            b.setPercentageShare(Double.valueOf(getString(row.getCell(4), true)));
+//
+//            member.addBeneficiary(b);
+//
+//        } catch (Exception e) {
+//            errors.add("Beneficiary row " + row.getRowNum() + ": " + e.getMessage());
+//        }
+//    }
+//}
+//private void attachPayments(Sheet sheet, Map<String, Member> map, List<String> errors) {
+//
+//    if (sheet == null) return;
+//
+//    for (Row row : sheet) {
+//
+//        if (row == null || row.getRowNum() == 0) continue;
+//
+//        try {
+//            String email = getString(row.getCell(0), true).trim().toLowerCase();
+//            Member member = map.get(email);
+//
+//            if (member == null) {
+//                errors.add("Payment: member not found " + email);
+//                continue;
+//            }
+//
+//            Payment p = new Payment();
+//
+//            String amountStr = getString(row.getCell(1), false);
+//            BigDecimal amount = (amountStr != null)
+//                    ? new BigDecimal(amountStr.replace(",", ""))
+//                    : billingService.calculateBillingSummary(member).getSuggestedPayment();
+//
+//            p.setAmount(amount);
+//            p.setReason(getString(row.getCell(2), false));
+//            p.setPaymentDate(getLocalDate(row.getCell(3)));
+//            p.setBillingPeriod(BillingPeriod.valueOf(getString(row.getCell(4), true).toUpperCase()));
+//            p.setPaymentMethod(PaymentMethod.valueOf(getString(row.getCell(5), true).toUpperCase()));
+//
+//            member.addPayment(p); // IMPORTANT
+//
+//        } catch (Exception e) {
+//            errors.add("Payment row " + row.getRowNum() + ": " + e.getMessage());
+//        }
+//    }
+//}
     private void importPayments(Sheet sheet, Map<String, Member> memberMap) {
 
         for (Row row : sheet) {
 
-            if (row.getRowNum() == 0) continue;
+          // if (row.getRowNum() == 0) continue;
+            if (row == null || isHeaderRow(row)) continue;
 
-           // String email = getCellValue(row.getCell(0));
 
-           // Member member = memberMap.get(email);
-            // Add this in importDependents, importPayments, importBeneficiaries
+
             String email = getCellValue(row.getCell(0));
             if (email == null) continue;
             email = email.trim().toLowerCase(); // ← missing in your other import methods!
 
             Member member = memberMap.get(email);
 
-            if (member == null) continue;
+           // if (member == null) continue;
+            if (member == null) {
+                throw new RuntimeException("Member not found: " + email);
+            }
 
             Payment payment = new Payment();
             String amountValue = getCellValue(row.getCell(1));
@@ -400,6 +516,7 @@ public Map<String, Object> importMembersFromExcel(MultipartFile file) {
             payment.setInvoiceIssued(Boolean.parseBoolean(getCellValue(row.getCell(10))));
 
             member.addPayment(payment);
+
         }
     }
     public void uploadMemberImage(

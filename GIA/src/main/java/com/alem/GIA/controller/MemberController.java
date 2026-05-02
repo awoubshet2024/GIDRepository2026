@@ -49,23 +49,24 @@ public class MemberController {
         this.memberMapper = memberMapper;
     }
 
-//    @PostMapping("/import-members")
-//    public ResponseEntity<Map<String,String>> importMembers(@RequestParam("file") MultipartFile file) {
-//
-//        memberService.importMembersFromExcel(file);
-//
-//        Map<String,String> response = new HashMap<>();
-//        response.put("message", "Members imported successfully");
-//
-//        return ResponseEntity.ok(response);
-//    }
     @PostMapping("/import-members")
-    public ResponseEntity<Map<String, Object>> importMembers(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String,String>> importMembers(@RequestParam("file") MultipartFile file) {
 
-        Map<String, Object> result = memberService.importMembersFromExcel(file);
+        memberService.importMembersFromExcel(file);
 
-        return ResponseEntity.ok(result);
+        Map<String,String> response = new HashMap<>();
+        response.put("message", "Members imported successfully");
+
+        return ResponseEntity.ok(response);
     }
+//    @PostMapping("/import-members")
+//    public ResponseEntity<Map<String, Object>> importMembers(@RequestParam("file") MultipartFile file) {
+//
+//       // Map<String, Object> result = memberService.importMembersFromExcel(file);
+//        Map<String, Object> result = memberService.importAllFromExcel(file);
+//
+//        return ResponseEntity.ok(result);
+//    }
 
     @PostMapping("/{memberId}/dependents")
     public ResponseEntity<MemberDto> addDependent(@PathVariable Integer memberId, @RequestBody Dependent dependent){
