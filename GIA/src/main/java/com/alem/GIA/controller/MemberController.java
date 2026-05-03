@@ -17,6 +17,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -49,25 +50,27 @@ public class MemberController {
         this.memberMapper = memberMapper;
     }
 
-    @PostMapping("/import-members")
-    public ResponseEntity<Map<String,String>> importMembers(@RequestParam("file") MultipartFile file) {
-
-        memberService.importMembersFromExcel(file);
-
-        Map<String,String> response = new HashMap<>();
-        response.put("message", "Members imported successfully");
-
-        return ResponseEntity.ok(response);
-    }
 //    @PostMapping("/import-members")
-//    public ResponseEntity<Map<String, Object>> importMembers(@RequestParam("file") MultipartFile file) {
+//    public ResponseEntity<Map<String,String>> importMembers(@RequestParam("file") MultipartFile file) {
 //
-//       // Map<String, Object> result = memberService.importMembersFromExcel(file);
-//        Map<String, Object> result = memberService.importAllFromExcel(file);
+//        memberService.importMembersFromExcel(file);
 //
-//        return ResponseEntity.ok(result);
+//        Map<String,String> response = new HashMap<>();
+//        response.put("message", "Members imported successfully");
+//
+//        return ResponseEntity.ok(response);
 //    }
-
+@PostMapping("/import-members")
+public ResponseEntity<?> importMembers(@RequestParam("file") MultipartFile file) {
+    try {
+        memberService.importMembersFromExcel(file);
+        return ResponseEntity.ok(Map.of("message", "Members imported successfully"));
+    } catch (Exception e) {
+        e.printStackTrace(); // important for docker logs
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+    }
+}
     @PostMapping("/{memberId}/dependents")
     public ResponseEntity<MemberDto> addDependent(@PathVariable Integer memberId, @RequestBody Dependent dependent){
         Member member = memberService.addDependentToExistingMember(memberId,dependent);

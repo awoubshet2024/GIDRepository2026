@@ -86,121 +86,26 @@ public class MemberService {
             Sheet paymentsSheet = workbook.getSheet("Payments");
             Sheet beneficiariesSheet = workbook.getSheet("Beneficiaries");
 
-            if(membersSheet != null) importMembers(membersSheet, memberMap);
-            if(dependentsSheet != null) importDependents(dependentsSheet, memberMap);
-            if(paymentsSheet != null) importPayments(paymentsSheet, memberMap);
-            if(beneficiariesSheet != null) importBeneficiaries(beneficiariesSheet, memberMap);
+            if (membersSheet != null) importMembers(membersSheet, memberMap);
+            if (dependentsSheet != null) importDependents(dependentsSheet, memberMap);
+            if (paymentsSheet != null) importPayments(paymentsSheet, memberMap);
+            if (beneficiariesSheet != null) importBeneficiaries(beneficiariesSheet, memberMap);
+
 
 
             // FINAL SAVE → persists dependents & beneficiaries via cascade
             memberRepository.saveAll(memberMap.values());
 
         } catch (Exception e) {
+            e.printStackTrace(); // ADD THIS
             throw new RuntimeException("Excel import failed: " + e.getMessage(), e);
-        }
+       }
+
     }
 
 
-    private void processPaymentRow(Row row, Map<String, Member> memberMap) {
 
-        String email = getString(row.getCell(0), true);
 
-        Member member = memberMap.get(email);
-        if (member == null) {
-            throw new RuntimeException("Member not found for email: " + email);
-        }
-
-        Payment payment = new Payment();
-
-        // Amount
-        String amountStr = getString(row.getCell(1), false);
-        BigDecimal amount;
-
-        if (amountStr != null) {
-            amountStr = amountStr.replace(",", "").trim();
-            amount = new BigDecimal(amountStr);
-        } else {
-            BillingSummary summary = billingService.calculateBillingSummary(member);
-            amount = summary.getSuggestedPayment();
-        }
-        payment.setAmount(amount);
-
-        // Reason
-        payment.setReason(getString(row.getCell(2), false));
-
-        // Date
-        payment.setPaymentDate(getDate(row.getCell(3)));
-
-        // Enums (SAFE)
-        payment.setBillingPeriod(parseEnum(
-                BillingPeriod.class,
-                getString(row.getCell(4), true),
-                "Invalid BillingPeriod"
-        ));
-
-        payment.setPaymentMethod(parseEnum(
-                PaymentMethod.class,
-                getString(row.getCell(5), true),
-                "Invalid PaymentMethod"
-        ));
-
-        // Optional fields
-        payment.setCheckNumber(getString(row.getCell(6), false));
-        payment.setCardLast4(getString(row.getCell(7), false));
-        payment.setStatus(getString(row.getCell(8), false));
-        payment.setInvoiceNumber(getString(row.getCell(9), false));
-
-        String invoiceIssuedStr = getString(row.getCell(10), false);
-        payment.setInvoiceIssued(Boolean.parseBoolean(invoiceIssuedStr));
-
-        member.addPayment(payment);
-    }
-    private <T extends Enum<T>> T parseEnum(Class<T> enumClass, String value, String errorMessage) {
-
-        if (value == null) {
-            throw new RuntimeException(errorMessage + ": value is null");
-        }
-
-        try {
-            return Enum.valueOf(enumClass, value.trim().toUpperCase());
-        } catch (Exception e) {
-            throw new RuntimeException(errorMessage + ": " + value);
-        }
-    }
-    private String getString(Cell cell, boolean required) {
-
-        if (cell == null) {
-            if (required) throw new RuntimeException("Required cell is missing");
-            return null;
-        }
-
-        String value;
-
-        switch (cell.getCellType()) {
-            case STRING:
-                value = cell.getStringCellValue();
-                break;
-            case NUMERIC:
-                value = String.valueOf(cell.getNumericCellValue());
-                break;
-            case BOOLEAN:
-                value = String.valueOf(cell.getBooleanCellValue());
-                break;
-            default:
-                value = null;
-        }
-
-        if (value != null) {
-            value = value.trim();
-            if (value.isEmpty()) value = null;
-        }
-
-        if (required && value == null) {
-            throw new RuntimeException("Required cell is empty");
-        }
-
-        return value != null ? value.toLowerCase() : null;
-    }
     private boolean isHeaderRow(Row row) {
         Cell firstCell = row.getCell(0);
         if (firstCell == null) return true;
@@ -236,7 +141,13 @@ public class MemberService {
             member.setPhone(getCellValue(row.getCell(4)));
             member.setDateOfBirth(getLocalDate(row.getCell(5)));
             member.setDateOfReg(getLocalDate(row.getCell(6)));
-            member.setMaritalStatus(MaritalStatus.valueOf(getCellValue(row.getCell(7))));
+           // member.setMaritalStatus(MaritalStatus.valueOf(getCellValue(row.getCell(7))));
+            member.setMaritalStatus(
+                    safeEnum(MaritalStatus.class, safeString(row.getCell(7)))
+            );
+
+
+
 
              // imageName & imageType are optional
             member.setImageName(getCellValue(row.getCell(8)));
@@ -269,11 +180,15 @@ public class MemberService {
 
             Member member = memberMap.get(email);
 
-          //  Member member = memberMap.get(email);
+
 
             //if (member == null) continue;
+//            if (member == null) {
+//                throw new RuntimeException("Member not found: " + email);
+//            }
             if (member == null) {
-                throw new RuntimeException("Member not found: " + email);
+                System.out.println("Skipping missing member: " + email);
+                continue;
             }
 
             Dependent dep = new Dependent();
@@ -282,8 +197,11 @@ public class MemberService {
             dep.setLastName(getCellValue(row.getCell(2)));
             dep.setGender(getCellValue(row.getCell(3)));
 
+//            dep.setRelationship(
+//                    Relationship.valueOf(getCellValue(row.getCell(4)))
+//            );
             dep.setRelationship(
-                    Relationship.valueOf(getCellValue(row.getCell(4)))
+                    safeEnum(Relationship.class, safeString(row.getCell(4)))
             );
 
             dep.setDateOfBirth(getLocalDate(row.getCell(5)));
@@ -313,8 +231,12 @@ public class MemberService {
             Member member = memberMap.get(email);
 
             //if (member == null) continue;
+//            if (member == null) {
+//                throw new RuntimeException("Member not found: " + email);
+//            }
             if (member == null) {
-                throw new RuntimeException("Member not found: " + email);
+                System.out.println("Skipping missing member: " + email);
+                continue;
             }
 
             Beneficiary ben = new Beneficiary();
@@ -322,66 +244,176 @@ public class MemberService {
             ben.setFirstName(getCellValue(row.getCell(1)));
             ben.setLastName(getCellValue(row.getCell(2)));
 
+//            ben.setRelationship(
+//                    Relationship.valueOf(getCellValue(row.getCell(3)))
+//            );
+//
+//            ben.setPercentageShare(
+//                    Double.valueOf(getCellValue(row.getCell(4)))
+//            );
             ben.setRelationship(
-                    Relationship.valueOf(getCellValue(row.getCell(3)))
+                    safeEnum(Relationship.class, safeString(row.getCell(3)))
             );
 
             ben.setPercentageShare(
-                    Double.valueOf(getCellValue(row.getCell(4)))
+                    safeDouble(safeString(row.getCell(4)))
             );
-
             member.addBeneficiary(ben);
 
         }
     }
 
-    private void importPayments(Sheet sheet, Map<String, Member> memberMap) {
+//    private void importPayments(Sheet sheet, Map<String, Member> memberMap) {
+//
+//        for (Row row : sheet) {
+//
+//          // if (row.getRowNum() == 0) continue;
+//            if (row == null || isHeaderRow(row)) continue;
+//
+//
+//
+//            String email = getCellValue(row.getCell(0));
+//            if (email == null) continue;
+//            email = email.trim().toLowerCase(); // ← missing in your other import methods!
+//
+//            Member member = memberMap.get(email);
+//
+//           // if (member == null) continue;
+////            if (member == null) {
+////                throw new RuntimeException("Member not found: " + email);
+////            }
+//            if (member == null) {
+//                System.out.println("Skipping missing member: " + email);
+//                continue;
+//            }
+//
+//            Payment payment = new Payment();
+//
+//            String amountValue = getCellValue(row.getCell(1));
+//            BigDecimal amount;
+//            // 🔹 Calculate full billing summary
+//            if(amountValue != null && !amountValue.isEmpty()){
+//                // Excel provided a payment
+//                amountValue = amountValue.replace(",", "").replace("$", "").trim();
+//
+//                // Excel provided a payment
+//               amount = new BigDecimal(amountValue);
+//            }else{
+//                // Auto calculate payment
+//                BillingSummary summary = billingService.calculateBillingSummary(member);
+//                amount = summary.getSuggestedPayment();
+//            }
+//            payment.setAmount(amount);
+//
+//            payment.setReason(getCellValue(row.getCell(2)));
+//            payment.setPaymentDate(getLocalDate(row.getCell(3)));
+//            payment.setBillingPeriod(BillingPeriod.valueOf(getCellValue(row.getCell(4))));
+//            payment.setPaymentMethod(PaymentMethod.valueOf(getCellValue(row.getCell(5))));
+//            payment.setCheckNumber(getCellValue(row.getCell(6)));
+//            payment.setCardLast4(getCellValue(row.getCell(7)));
+//            payment.setStatus(getCellValue(row.getCell(8)));
+//            payment.setInvoiceNumber(getCellValue(row.getCell(9)));
+//            payment.setInvoiceIssued(Boolean.parseBoolean(getCellValue(row.getCell(10))));
+//
+//            member.addPayment(payment);
+//
+//        }
+//    }
+private void importPayments(Sheet sheet, Map<String, Member> memberMap) {
 
-        for (Row row : sheet) {
+    for (Row row : sheet) {
 
-          // if (row.getRowNum() == 0) continue;
-            if (row == null || isHeaderRow(row)) continue;
+        if (row == null || isHeaderRow(row)) continue;
 
-
-
-            String email = getCellValue(row.getCell(0));
+        try {
+            String email = safeString(row.getCell(0));
             if (email == null) continue;
-            email = email.trim().toLowerCase(); // ← missing in your other import methods!
+            email = email.trim().toLowerCase();
 
             Member member = memberMap.get(email);
-
-           // if (member == null) continue;
             if (member == null) {
-                throw new RuntimeException("Member not found: " + email);
+                System.out.println("Skipping missing member: " + email);
+                continue;
             }
 
             Payment payment = new Payment();
-            String amountValue = getCellValue(row.getCell(1));
-         BigDecimal amount;
-            // 🔹 Calculate full billing summary
-            if(amountValue != null && !amountValue.isEmpty()){
-                // Excel provided a payment
-                amount = new BigDecimal(amountValue);
-            }else{
-                // Auto calculate payment
+
+            String amountValue = safeString(row.getCell(1));
+            BigDecimal amount = safeBigDecimal(amountValue);
+
+            if (amount == null) {
                 BillingSummary summary = billingService.calculateBillingSummary(member);
                 amount = summary.getSuggestedPayment();
             }
-            payment.setAmount(amount);
 
-            payment.setReason(getCellValue(row.getCell(2)));
+            payment.setAmount(amount);
+            payment.setReason(safeString(row.getCell(2)));
             payment.setPaymentDate(getLocalDate(row.getCell(3)));
-            payment.setBillingPeriod(BillingPeriod.valueOf(getCellValue(row.getCell(4))));
-            payment.setPaymentMethod(PaymentMethod.valueOf(getCellValue(row.getCell(5))));
-            payment.setCheckNumber(getCellValue(row.getCell(6)));
-            payment.setCardLast4(getCellValue(row.getCell(7)));
-            payment.setStatus(getCellValue(row.getCell(8)));
-            payment.setInvoiceNumber(getCellValue(row.getCell(9)));
-            payment.setInvoiceIssued(Boolean.parseBoolean(getCellValue(row.getCell(10))));
+
+            payment.setBillingPeriod(
+                    safeEnum(BillingPeriod.class, safeString(row.getCell(4)))
+            );
+
+            payment.setPaymentMethod(
+                    safeEnum(PaymentMethod.class, safeString(row.getCell(5)))
+            );
+
+            payment.setCheckNumber(safeString(row.getCell(6)));
+            payment.setCardLast4(safeString(row.getCell(7)));
+            payment.setStatus(safeString(row.getCell(8)));
+            payment.setInvoiceNumber(safeString(row.getCell(9)));
+
+            payment.setInvoiceIssued(
+                    safeBoolean(safeString(row.getCell(10)))
+            );
 
             member.addPayment(payment);
 
+        } catch (Exception e) {
+            System.out.println("Error processing payment row " + row.getRowNum() + ": " + e.getMessage());
         }
+    }
+}
+    private String safeString(Cell cell) {
+        if (cell == null) return null;
+        String val = cell.toString().trim();
+        return val.isEmpty() ? null : val;
+    }
+
+    private <T extends Enum<T>> T safeEnum(Class<T> enumClass, String value) {
+        try {
+            if (value == null) return null;
+            return Enum.valueOf(enumClass, value.trim().toUpperCase());
+        } catch (Exception e) {
+            System.out.println("Invalid enum value: " + value + " for " + enumClass.getSimpleName());
+            return null;
+        }
+    }
+
+    private BigDecimal safeBigDecimal(String value) {
+        try {
+            if (value == null || value.isBlank() || value.equalsIgnoreCase("NaN")) return null;
+            value = value.replace(",", "").replace("$", "").trim();
+            return new BigDecimal(value);
+        } catch (Exception e) {
+            System.out.println("Invalid number: " + value);
+            return null;
+        }
+    }
+
+    private Double safeDouble(String value) {
+        try {
+            if (value == null || value.isBlank() || value.equalsIgnoreCase("NaN")) return null;
+            return Double.valueOf(value);
+        } catch (Exception e) {
+            System.out.println("Invalid double: " + value);
+            return null;
+        }
+    }
+
+    private Boolean safeBoolean(String value) {
+        if (value == null) return false;
+        return value.trim().equalsIgnoreCase("true");
     }
     public void uploadMemberImage(
             Integer memberId,
