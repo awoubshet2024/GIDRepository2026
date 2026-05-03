@@ -100,47 +100,7 @@ public class MemberService {
         }
     }
 
-//@Transactional
-//public Map<String, Object> importAllFromExcel(MultipartFile file) {
-//
-//    int success = 0;
-//    int failed = 0;
-//    List<String> errors = new ArrayList<>();
-//
-//    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-//
-//        Sheet memberSheet = workbook.getSheet("Members");
-//        Sheet paymentSheet = workbook.getSheet("Payments");
-//        Sheet depSheet = workbook.getSheet("Dependents");
-//        Sheet benSheet = workbook.getSheet("Beneficiaries");
-//
-//        if (memberSheet == null) throw new RuntimeException("Members sheet missing");
-//
-//        // 1. LOAD OR CREATE MEMBERS MAP
-//        Map<String, Member> memberMap = loadMembers(memberSheet);
-//
-//        // 2. ATTACH CHILD DATA
-//        attachDependents(depSheet, memberMap, errors);
-//        attachBeneficiaries(benSheet, memberMap, errors);
-//        attachPayments(paymentSheet, memberMap, errors);
-//
-//        // 3. SAVE EVERYTHING
-//        memberRepository.saveAll(memberMap.values());
-//
-//        success = memberMap.size();
-//
-//    } catch (Exception e) {
-//        throw new RuntimeException("Import failed: " + e.getMessage(), e);
-//    }
-//
-//    Map<String, Object> response = new HashMap<>();
-//    response.put("successCount", success);
-//    response.put("failureCount", failed);
-//    response.put("errors", errors);
-//    response.put("message", "Import completed");
-//
-//    return response;
-//}
+
     private void processPaymentRow(Row row, Map<String, Member> memberMap) {
 
         String email = getString(row.getCell(0), true);
@@ -333,37 +293,7 @@ public class MemberService {
 
         }
     }
-//private void attachDependents(Sheet sheet, Map<String, Member> map, List<String> errors) {
-//
-//   if (sheet == null) return;
-//
-//   for (Row row : sheet) {
-//
-//       if (row == null || row.getRowNum() == 0) continue;
-//
-//      try {
-//          String email = getString(row.getCell(0), true).trim().toLowerCase();
-//           Member member = map.get(email);
-//
-//            if (member == null) {
-//               errors.add("Dependent: member not found " + email);
-//                continue;
-//            }
-//
-//            Dependent d = new Dependent();
-//           d.setFirstName(getString(row.getCell(1), true));
-//            d.setLastName(getString(row.getCell(2), true));
-//           d.setGender(getString(row.getCell(3), false));
-//          d.setRelationship(Relationship.valueOf(getString(row.getCell(4), true).toUpperCase()));
-//           d.setDateOfBirth(getLocalDate(row.getCell(5)));
-//
-//           member.addDependent(d); // IMPORTANT (handles both sides)
-//
-//       } catch (Exception e) {
-//           errors.add("Dependent row " + row.getRowNum() + ": " + e.getMessage());
-//       }
-//   }
-//}
+
 
     private void importBeneficiaries(Sheet sheet, Map<String, Member> memberMap) {
 
@@ -404,73 +334,7 @@ public class MemberService {
 
         }
     }
-//private void attachBeneficiaries(Sheet sheet, Map<String, Member> map, List<String> errors) {
-//
-//    if (sheet == null) return;
-//
-//    for (Row row : sheet) {
-//
-//        if (row == null || row.getRowNum() == 0) continue;
-//
-//        try {
-//            String email = getString(row.getCell(0), true).trim().toLowerCase();
-//            Member member = map.get(email);
-//
-//            if (member == null) {
-//                errors.add("Beneficiary: member not found " + email);
-//                continue;
-//            }
-//
-//            Beneficiary b = new Beneficiary();
-//            b.setFirstName(getString(row.getCell(1), true));
-//            b.setLastName(getString(row.getCell(2), true));
-//            b.setRelationship(Relationship.valueOf(getString(row.getCell(3), true).toUpperCase()));
-//            b.setPercentageShare(Double.valueOf(getString(row.getCell(4), true)));
-//
-//            member.addBeneficiary(b);
-//
-//        } catch (Exception e) {
-//            errors.add("Beneficiary row " + row.getRowNum() + ": " + e.getMessage());
-//        }
-//    }
-//}
-//private void attachPayments(Sheet sheet, Map<String, Member> map, List<String> errors) {
-//
-//    if (sheet == null) return;
-//
-//    for (Row row : sheet) {
-//
-//        if (row == null || row.getRowNum() == 0) continue;
-//
-//        try {
-//            String email = getString(row.getCell(0), true).trim().toLowerCase();
-//            Member member = map.get(email);
-//
-//            if (member == null) {
-//                errors.add("Payment: member not found " + email);
-//                continue;
-//            }
-//
-//            Payment p = new Payment();
-//
-//            String amountStr = getString(row.getCell(1), false);
-//            BigDecimal amount = (amountStr != null)
-//                    ? new BigDecimal(amountStr.replace(",", ""))
-//                    : billingService.calculateBillingSummary(member).getSuggestedPayment();
-//
-//            p.setAmount(amount);
-//            p.setReason(getString(row.getCell(2), false));
-//            p.setPaymentDate(getLocalDate(row.getCell(3)));
-//            p.setBillingPeriod(BillingPeriod.valueOf(getString(row.getCell(4), true).toUpperCase()));
-//            p.setPaymentMethod(PaymentMethod.valueOf(getString(row.getCell(5), true).toUpperCase()));
-//
-//            member.addPayment(p); // IMPORTANT
-//
-//        } catch (Exception e) {
-//            errors.add("Payment row " + row.getRowNum() + ": " + e.getMessage());
-//        }
-//    }
-//}
+
     private void importPayments(Sheet sheet, Map<String, Member> memberMap) {
 
         for (Row row : sheet) {
